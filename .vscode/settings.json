@@ -1,0 +1,17 @@
+{
+  "files.associations": {
+    "*.bnl": "bnl"
+  },
+  "material-icon-theme.files.associations": {
+    "*.bnl": "python"
+  },
+  "vsicons.associations.files": [
+    {
+      "icon": "python",
+      "extensions": [
+        "bnl"
+      ],
+      "format": "svg"
+    }
+  ]
+}

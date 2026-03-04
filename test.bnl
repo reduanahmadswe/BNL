@@ -1,0 +1,15 @@
+# Extra test program
+
+dorlam a 8
+dorlam b 2
+
+dekhao a jog b
+dekhao a biyog b
+dekhao a gun b
+dekhao a vag b
+
+dorlam i 1
+guraw i <= 3
+dekhao i
+dorlam i i jog 1
+shesh

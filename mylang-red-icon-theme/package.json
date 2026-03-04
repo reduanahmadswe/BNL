@@ -1,0 +1,27 @@
+{
+  "name": "bnl-red-icon-theme",
+  "displayName": "BNL Red Icon Theme",
+  "description": "Custom red file icon for .bnl files",
+  "version": "0.0.2",
+  "publisher": "local",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://example.com/local/bnl-red-icon-theme.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "iconThemes": [
+      {
+        "id": "bnl-red-icon-theme",
+        "label": "BNL Red Icon Theme",
+        "path": "./icon-theme.json"
+      }
+    ]
+  }
+}

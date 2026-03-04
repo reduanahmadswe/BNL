@@ -1,0 +1,36 @@
+{
+  "name": "bnl-language-support",
+  "displayName": "BNL Language Support",
+  "description": "Syntax highlighting support for Banglish .bnl files",
+  "version": "0.0.1",
+  "publisher": "local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "bnl",
+        "aliases": [
+          "BNL",
+          "Banglish"
+        ],
+        "extensions": [
+          ".bnl"
+        ],
+        "configuration": "./language-configuration/language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "bnl",
+        "scopeName": "source.bnl",
+        "path": "./syntaxes/bnl.tmLanguage.json"
+      }
+    ]
+  }
+}

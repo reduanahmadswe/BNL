@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <path d="M14 4h25l11 11v41a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z" fill="#cf202e"/>
+  <path d="M39 4v11h11" fill="#f06a74"/>
+  <rect x="16" y="22" width="32" height="3" rx="1.5" fill="#ffffff" opacity="0.9"/>
+  <rect x="16" y="29" width="22" height="3" rx="1.5" fill="#ffffff" opacity="0.9"/>
+  <path d="M18 44l6-6m0 0l6 6m-6-6v12" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="35" y="52" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">MY</text>
+</svg>
