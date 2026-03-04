@@ -1,9 +1,10 @@
 {
-  "name": "bnl-language-support",
-  "displayName": "BNL Language Support",
-  "description": "Syntax highlighting support for Banglish .bnl files",
-  "version": "0.1.0",
-  "publisher": "reduanahmadswe",
+  "name": "bnl-language-toolkit-runner",
+  "displayName": "Banglish",
+  "description": "Banglish BNL syntax highlighting and language support for .bnl files",
+  "icon": "icons/banglish-icon.png",
+  "version": "0.1.2",
+  "publisher": "ReduanAhmad",
   "license": "MIT",
   "homepage": "https://github.com/reduanahmadswe/bnl-language-support",
   "bugs": {
@@ -20,6 +21,9 @@
     "syntax-highlighting"
   ],
   "files": [
+    "icons/**",
+    "extension.js",
+    "runtime/**",
     "language-configuration/**",
     "syntaxes/**",
     "README.md",
@@ -27,19 +31,41 @@
     "package.json"
   ],
   "scripts": {
-    "package": "vsce package",
-    "publish": "vsce publish",
-    "publish:patch": "vsce publish patch",
-    "publish:minor": "vsce publish minor",
-    "publish:major": "vsce publish major"
+    "package": "npx @vscode/vsce package",
+    "publish": "npx @vscode/vsce publish",
+    "publish:patch": "npx @vscode/vsce publish patch",
+    "publish:minor": "npx @vscode/vsce publish minor",
+    "publish:major": "npx @vscode/vsce publish major"
   },
   "engines": {
     "vscode": "^1.85.0"
   },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:bnl",
+    "onCommand:bnl.runFile"
+  ],
   "categories": [
     "Programming Languages"
   ],
   "contributes": {
+    "commands": [
+      {
+        "command": "bnl.runFile",
+        "title": "BNL: Run Current File",
+        "category": "BNL"
+      }
+    ],
+    "configuration": {
+      "title": "BNL",
+      "properties": {
+        "bnl.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Python executable path used to run BNL files (e.g. python, python3, C:/Python/python.exe)."
+        }
+      }
+    },
     "languages": [
       {
         "id": "bnl",
