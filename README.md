@@ -7,9 +7,12 @@
 - variable create: `dorlam`
 - print: `dekhao`
 - input: `naw`
+- function: `kaj`
+- return: `ferot`
 - if: `jodi`
 - else: `nahole`
 - while loop: `guraw`
+- for loop: `ghuro ... theke ...`
 - end block: `shesh`
 - break: `bhenge_jao`
 - continue: `cholte_thako`
@@ -20,23 +23,58 @@
 - logical and/or/not: `ar`, `ba`, `na`
 - boolean literals: `shotti`, `mitha`
 
+## V2.1 new features
+
+- Functions with return values
+- List literals and index access
+- For-range loop (`ghuro ... theke ...`)
+
+### Function example
+
+```text
+kaj jog(a b)
+ferot a jog b
+shesh
+
+dorlam total jog(5 10)
+dekhao total
+```
+
+### List example
+
+```text
+dorlam nums [1 2 3 4]
+dekhao nums
+dekhao nums[2]
+```
+
+### For loop example
+
+```text
+ghuro i 1 theke 5
+dekhao i
+shesh
+```
+
 ## Files
 
-- `interpreter.py` -> Banglish interpreter
-- `program.bnl` -> sample Banglish program
-- `test.bnl` -> extra test program
-- `run_program.ps1` -> one command runner
+- `bnl-core/interpreter.py` -> Banglish interpreter
+- `bnl-core/program.bnl` -> sample Banglish program
+- `bnl-core/test.bnl` -> extra test program
+- `bnl-core/v2_demo.bnl` -> function/list/for demo
+- `scripts/run_program.ps1` -> one command runner
+- `scripts/program.ps1` -> shortcut launcher script
 
 ## Run
 
 ```bash
-python interpreter.py program.bnl
+python bnl-core/interpreter.py bnl-core/program.bnl
 ```
 
 PowerShell shortcut:
 
 ```powershell
-./run_program.ps1
+./scripts/run_program.ps1
 ```
 
 ## Example program

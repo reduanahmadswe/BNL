@@ -1,4 +1,5 @@
 Set-Location -Path $PSScriptRoot
+$projectRoot = Split-Path -Parent $PSScriptRoot
 
 $python = "C:/Users/Reduan Ahmad/AppData/Local/Programs/Python/Python313/python.exe"
 
@@ -7,4 +8,4 @@ if (-not (Test-Path $python)) {
     exit 1
 }
 
-& $python "interpreter.py" "program.bnl"
+& $python (Join-Path $projectRoot "bnl-core/interpreter.py") (Join-Path $projectRoot "bnl-core/program.bnl")

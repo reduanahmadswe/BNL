@@ -1,0 +1,18 @@
+# V2.1 demo: function + list + for-loop
+
+kaj jog(a b)
+ferot a jog b
+shesh
+
+dorlam x 10
+dorlam y 20
+dorlam ans jog(x y)
+dekhao "func result:" ans
+
+dorlam nums [5 10 15 20]
+dekhao "nums:" nums
+dekhao "nums[1]:" nums[1]
+
+ghuro i 1 theke 3
+dekhao "ghuro:" i
+shesh

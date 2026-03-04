@@ -38,7 +38,7 @@
       "patterns": [
         {
           "name": "keyword.control.bnl",
-          "match": "\\b(dorlam|dekhao|naw|jodi|nahole|guraw|shesh|bhenge_jao|cholte_thako)\\b"
+          "match": "\\b(dorlam|dekhao|naw|kaj|ferot|jodi|nahole|guraw|ghuro|theke|shesh|bhenge_jao|cholte_thako)\\b"
         }
       ]
     },

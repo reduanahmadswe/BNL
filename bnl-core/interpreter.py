@@ -11,9 +11,12 @@ from typing import Any, Optional
 # variable creation -> dorlam
 # print            -> dekhao
 # input            -> naw
+# function         -> kaj
+# return           -> ferot
 # if               -> jodi
 # else             -> nahole
 # while loop       -> guraw
+# for loop         -> ghuro ... theke ...
 # end block        -> shesh
 # break            -> bhenge_jao
 # continue         -> cholte_thako
@@ -24,9 +27,12 @@ from typing import Any, Optional
 KEY_DORLAM = "dorlam"
 KEY_DEKHAO = "dekhao"
 KEY_NAW = "naw"
+KEY_KAJ = "kaj"
+KEY_FEROT = "ferot"
 KEY_JODI = "jodi"
 KEY_NAHOLE = "nahole"
 KEY_GURAW = "guraw"
+KEY_GHURO = "ghuro"
 KEY_SHESH = "shesh"
 KEY_BREAK = "bhenge_jao"
 KEY_CONTINUE = "cholte_thako"
@@ -63,6 +69,12 @@ class ContinueSignal(Exception):
     pass
 
 
+class ReturnSignal(Exception):
+    def __init__(self, value: Any):
+        super().__init__()
+        self.value = value
+
+
 # -----------------------------
 # Expression tokenizer / parser
 # -----------------------------
@@ -71,7 +83,7 @@ EXPR_TOKEN_REGEX = re.compile(
     r'''\s*(?:
         (?P<NUMBER>\d+(?:\.\d+)?)
       | (?P<STRING>"[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')
-      | (?P<OP>==|!=|<=|>=|\+|-|\*|/|<|>|\(|\))
+            | (?P<OP>==|!=|<=|>=|\+|-|\*|/|<|>|\(|\)|\[|\]|,)
       | (?P<IDENT>[A-Za-z_][A-Za-z0-9_]*)
     )''',
     re.VERBOSE,
@@ -111,7 +123,14 @@ class ExprParser:
             value = match.group(kind)
 
             if kind == "IDENT" and value in BANG_OP_TO_SYMBOL:
-                tokens.append(Token("OP", BANG_OP_TO_SYMBOL[value]))
+                peek_index = index
+                while peek_index < len(text) and text[peek_index].isspace():
+                    peek_index += 1
+
+                if peek_index < len(text) and text[peek_index] == "(":
+                    tokens.append(Token("IDENT", value))
+                else:
+                    tokens.append(Token("OP", BANG_OP_TO_SYMBOL[value]))
             else:
                 tokens.append(Token(kind, value))
 
@@ -200,7 +219,31 @@ class ExprParser:
             self._eat("-")
             right = self._parse_unary()
             return ExprNode(kind="unary", value="-", right=right)
-        return self._parse_primary()
+        return self._parse_postfix()
+
+    def _parse_postfix(self) -> ExprNode:
+        node = self._parse_primary()
+
+        while self._current() is not None and self._current().value in ("(", "["):
+            if self._current().value == "(":
+                self._eat("(")
+                args: list[ExprNode] = []
+                while self._current() is not None and self._current().value != ")":
+                    args.append(self._parse_or())
+                    if self._current() is not None and self._current().value == ",":
+                        self._eat(",")
+                self._eat(")")
+                node = ExprNode(kind="call", left=node, value=args)
+                continue
+
+            if self._current().value == "[":
+                self._eat("[")
+                index_expr = self._parse_or()
+                self._eat("]")
+                node = ExprNode(kind="index", left=node, right=index_expr)
+                continue
+
+        return node
 
     def _parse_primary(self) -> ExprNode:
         token = self._current()
@@ -209,9 +252,19 @@ class ExprParser:
 
         if token.value == "(":
             self._eat("(")
-            node = self._parse_comparison()
+            node = self._parse_or()
             self._eat(")")
             return node
+
+        if token.value == "[":
+            self._eat("[")
+            items: list[ExprNode] = []
+            while self._current() is not None and self._current().value != "]":
+                items.append(self._parse_or())
+                if self._current() is not None and self._current().value == ",":
+                    self._eat(",")
+            self._eat("]")
+            return ExprNode(kind="list", value=items)
 
         if token.kind == "NUMBER":
             self._eat(expected_kind="NUMBER")
@@ -244,6 +297,13 @@ class ExprParser:
 class Statement:
     kind: str
     value: Any = None
+
+
+@dataclass
+class FunctionDef:
+    name: str
+    params: list[str]
+    body: list[Statement]
 
 
 class ProgramParser:
@@ -296,6 +356,35 @@ class ProgramParser:
                 expr_text = raw_line.split(None, 2)[2]
                 expr = ExprParser(expr_text).parse()
                 statements.append(Statement(kind="set", value=(var_name, expr)))
+                continue
+
+            if keyword == KEY_KAJ:
+                header = raw_line[len(KEY_KAJ):].strip()
+                match = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)", header)
+                if not match:
+                    raise self._error("'kaj' needs: kaj <name>(<params>)")
+
+                func_name = match.group(1)
+                params_text = match.group(2).strip()
+                params: list[str] = []
+                if params_text:
+                    params = [p for p in re.split(r"[\s,]+", params_text) if p]
+
+                body, end_keyword = self._parse_block({KEY_SHESH})
+                if end_keyword != KEY_SHESH:
+                    raise self._error("Expected 'shesh' after 'kaj' block")
+
+                statements.append(
+                    Statement(kind="func_def", value=FunctionDef(name=func_name, params=params, body=body))
+                )
+                continue
+
+            if keyword == KEY_FEROT:
+                if len(pieces) == 1:
+                    statements.append(Statement(kind="return", value=None))
+                else:
+                    expr_text = raw_line.split(None, 1)[1]
+                    statements.append(Statement(kind="return", value=ExprParser(expr_text).parse()))
                 continue
 
             if keyword == KEY_DEKHAO:
@@ -353,6 +442,24 @@ class ProgramParser:
                 statements.append(Statement(kind="while", value=(condition, body)))
                 continue
 
+            if keyword == KEY_GHURO:
+                if len(pieces) < 5:
+                    raise self._error("'ghuro' needs: ghuro <name> <start> theke <end>")
+                if pieces[3] != "theke":
+                    raise self._error("'ghuro' format: ghuro <name> <start> theke <end>")
+
+                loop_var = pieces[1]
+                start_expr = ExprParser(pieces[2]).parse()
+                end_text = raw_line.split("theke", 1)[1].strip()
+                end_expr = ExprParser(end_text).parse()
+
+                body, end_keyword = self._parse_block({KEY_SHESH})
+                if end_keyword != KEY_SHESH:
+                    raise self._error("Expected 'shesh' after 'ghuro' block")
+
+                statements.append(Statement(kind="for_range", value=(loop_var, start_expr, end_expr, body)))
+                continue
+
             if keyword == KEY_BREAK:
                 statements.append(Statement(kind="break"))
                 continue
@@ -363,7 +470,7 @@ class ProgramParser:
 
             raise self._error(
                 "Unknown keyword: "
-                f"{keyword}. Use 'dorlam', 'dekhao', 'naw', 'jodi', 'nahole', 'guraw', 'shesh', 'bhenge_jao', and 'cholte_thako'."
+                f"{keyword}. Use 'dorlam', 'dekhao', 'naw', 'kaj', 'ferot', 'jodi', 'nahole', 'guraw', 'ghuro', 'shesh', 'bhenge_jao', and 'cholte_thako'."
             )
 
         if stop_keywords:
@@ -379,16 +486,30 @@ class ProgramParser:
 
 
 class Environment:
-    def __init__(self):
+    def __init__(self, parent: Optional["Environment"] = None):
+        self.parent = parent
         self.variables: dict[str, Any] = {}
+        self.functions: dict[str, FunctionDef] = {}
 
     def get_var(self, name: str) -> Any:
-        if name not in self.variables:
-            raise RuntimeErrorBnl(f"Undefined variable: {name}")
-        return self.variables[name]
+        if name in self.variables:
+            return self.variables[name]
+        if self.parent is not None:
+            return self.parent.get_var(name)
+        raise RuntimeErrorBnl(f"Undefined variable: {name}")
 
     def set_var(self, name: str, value: Any) -> None:
         self.variables[name] = value
+
+    def define_function(self, function: FunctionDef) -> None:
+        self.functions[function.name] = function
+
+    def get_function(self, name: str) -> FunctionDef:
+        if name in self.functions:
+            return self.functions[name]
+        if self.parent is not None:
+            return self.parent.get_function(name)
+        raise RuntimeErrorBnl(f"Undefined function: {name}")
 
 
 class Interpreter:
@@ -404,7 +525,10 @@ class Interpreter:
             return float(raw_value)
         return raw_value
 
-    def eval_expr(self, node: ExprNode) -> Any:
+    def eval_expr(self, node: ExprNode, env: Optional[Environment] = None) -> Any:
+        if env is None:
+            env = self.env
+
         if node.kind == "number":
             return node.value
 
@@ -415,10 +539,44 @@ class Interpreter:
             return node.value
 
         if node.kind == "var":
-            return self.env.get_var(node.value)
+            return env.get_var(node.value)
+
+        if node.kind == "list":
+            return [self.eval_expr(item, env) for item in node.value]
+
+        if node.kind == "index":
+            container = self.eval_expr(node.left, env)
+            index_value = self.eval_expr(node.right, env)
+            try:
+                return container[index_value]
+            except Exception as error:
+                raise RuntimeErrorBnl(f"Index access failed: {error}")
+
+        if node.kind == "call":
+            if node.left.kind != "var":
+                raise RuntimeErrorBnl("Function call must use a function name")
+            function_name = node.left.value
+            function = env.get_function(function_name)
+            arg_values = [self.eval_expr(argument, env) for argument in node.value]
+
+            if len(arg_values) != len(function.params):
+                raise RuntimeErrorBnl(
+                    f"Function '{function_name}' expects {len(function.params)} args, got {len(arg_values)}"
+                )
+
+            call_env = Environment(parent=env)
+            for param_name, arg_value in zip(function.params, arg_values):
+                call_env.set_var(param_name, arg_value)
+
+            try:
+                self.execute(function.body, call_env)
+            except ReturnSignal as signal:
+                return signal.value
+
+            return None
 
         if node.kind == "unary":
-            value = self.eval_expr(node.right)
+            value = self.eval_expr(node.right, env)
             if node.value == "-":
                 return -value
             if node.value == "not":
@@ -426,8 +584,8 @@ class Interpreter:
             raise RuntimeErrorBnl(f"Unknown unary operator: {node.value}")
 
         if node.kind == "binary":
-            left = self.eval_expr(node.left)
-            right = self.eval_expr(node.right)
+            left = self.eval_expr(node.left, env)
+            right = self.eval_expr(node.right, env)
             operator = node.value
 
             if operator == "+":
@@ -459,19 +617,31 @@ class Interpreter:
 
         raise RuntimeErrorBnl(f"Unknown expression node: {node.kind}")
 
-    def execute(self, statements: list[Statement]) -> None:
+    def execute(self, statements: list[Statement], env: Optional[Environment] = None) -> None:
+        if env is None:
+            env = self.env
+
         for statement in statements:
             if statement.kind == "set":
                 name, expr = statement.value
-                self.env.set_var(name, self.eval_expr(expr))
+                env.set_var(name, self.eval_expr(expr, env))
                 continue
 
+            if statement.kind == "func_def":
+                env.define_function(statement.value)
+                continue
+
+            if statement.kind == "return":
+                if statement.value is None:
+                    raise ReturnSignal(None)
+                raise ReturnSignal(self.eval_expr(statement.value, env))
+
             if statement.kind == "print":
-                print(self.eval_expr(statement.value))
+                print(self.eval_expr(statement.value, env))
                 continue
 
             if statement.kind == "print_many":
-                values = [self.eval_expr(expr) for expr in statement.value]
+                values = [self.eval_expr(expr, env) for expr in statement.value]
                 print(*values)
                 continue
 
@@ -479,28 +649,51 @@ class Interpreter:
                 var_name, prompt_expr = statement.value
                 prompt = ""
                 if prompt_expr is not None:
-                    prompt = str(self.eval_expr(prompt_expr))
+                    prompt = str(self.eval_expr(prompt_expr, env))
                 user_text = input(prompt)
-                self.env.set_var(var_name, self._coerce_input_value(user_text))
+                env.set_var(var_name, self._coerce_input_value(user_text))
                 continue
 
             if statement.kind == "if":
                 condition, then_body, else_body = statement.value
-                if self.eval_expr(condition):
-                    self.execute(then_body)
+                if self.eval_expr(condition, env):
+                    self.execute(then_body, env)
                 else:
-                    self.execute(else_body)
+                    self.execute(else_body, env)
                 continue
 
             if statement.kind == "while":
                 condition, body = statement.value
-                while self.eval_expr(condition):
+                while self.eval_expr(condition, env):
                     try:
-                        self.execute(body)
+                        self.execute(body, env)
                     except ContinueSignal:
                         continue
                     except BreakSignal:
                         break
+                continue
+
+            if statement.kind == "for_range":
+                loop_var, start_expr, end_expr, body = statement.value
+                start_value = self.eval_expr(start_expr, env)
+                end_value = self.eval_expr(end_expr, env)
+
+                if not isinstance(start_value, int) or not isinstance(end_value, int):
+                    raise RuntimeErrorBnl("'ghuro' start/end must be integer values")
+
+                step = 1 if end_value >= start_value else -1
+                current = start_value
+
+                while (current <= end_value) if step > 0 else (current >= end_value):
+                    env.set_var(loop_var, current)
+                    try:
+                        self.execute(body, env)
+                    except ContinueSignal:
+                        current += step
+                        continue
+                    except BreakSignal:
+                        break
+                    current += step
                 continue
 
             if statement.kind == "break":

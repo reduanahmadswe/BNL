@@ -1,0 +1,22 @@
+kaj jog(a b)
+ferot a jog b
+shesh
+
+dorlam total jog(8 2)
+dekhao "total:" total
+
+dorlam nums [1 2 3 4 5]
+dekhao "list:" nums
+dekhao "index2:" nums[2]
+
+ghuro i 1 theke 5
+jodi i == 4
+bhenge_jao
+shesh
+
+jodi i == 2
+cholte_thako
+shesh
+
+dekhao "for:" i
+shesh

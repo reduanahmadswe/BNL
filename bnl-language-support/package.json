@@ -2,9 +2,37 @@
   "name": "bnl-language-support",
   "displayName": "BNL Language Support",
   "description": "Syntax highlighting support for Banglish .bnl files",
-  "version": "0.0.1",
-  "publisher": "local",
+  "version": "0.1.0",
+  "publisher": "reduanahmadswe",
   "license": "MIT",
+  "homepage": "https://github.com/reduanahmadswe/bnl-language-support",
+  "bugs": {
+    "url": "https://github.com/reduanahmadswe/bnl-language-support/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reduanahmadswe/bnl-language-support"
+  },
+  "keywords": [
+    "bnl",
+    "banglish",
+    "programming-language",
+    "syntax-highlighting"
+  ],
+  "files": [
+    "language-configuration/**",
+    "syntaxes/**",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "scripts": {
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "publish:patch": "vsce publish patch",
+    "publish:minor": "vsce publish minor",
+    "publish:major": "vsce publish major"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
