@@ -1,0 +1,15 @@
+dorlam i 1
+guraw i <= 10
+
+jodi i == 7
+bhenge_jao
+shesh
+
+jodi i == 2 ba i == 4 ba i == 6
+dorlam i i jog 1
+cholte_thako
+shesh
+
+dekhao i
+dorlam i i jog 1
+shesh
