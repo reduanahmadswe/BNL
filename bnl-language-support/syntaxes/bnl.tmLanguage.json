@@ -13,6 +13,9 @@
       "include": "#operators"
     },
     {
+      "include": "#booleans"
+    },
+    {
       "include": "#strings"
     },
     {
@@ -35,7 +38,7 @@
       "patterns": [
         {
           "name": "keyword.control.bnl",
-          "match": "\\b(dorlam|dekhao|guraw|shesh)\\b"
+          "match": "\\b(dorlam|dekhao|naw|jodi|nahole|guraw|shesh|bhenge_jao|cholte_thako)\\b"
         }
       ]
     },
@@ -43,11 +46,19 @@
       "patterns": [
         {
           "name": "keyword.operator.word.bnl",
-          "match": "\\b(jog|biyog|gun|vag)\\b"
+          "match": "\\b(jog|biyog|gun|vag|ar|ba|na)\\b"
         },
         {
           "name": "keyword.operator.symbol.bnl",
           "match": "==|!=|<=|>=|<|>"
+        }
+      ]
+    },
+    "booleans": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.bnl",
+          "match": "\\b(shotti|mitha)\\b"
         }
       ]
     },

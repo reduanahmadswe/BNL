@@ -8,3 +8,12 @@ dekhao y vag x
 
 dekhao x biyog y
 
+naw age "tumar age dew koto? "
+dekhao "age: " age
+
+jodi age >= 18 ar age < 60
+dekhao "adult"
+nahole
+dekhao "not adult"
+shesh
+

@@ -10,20 +10,40 @@ from typing import Any, Optional
 # -----------------------------
 # variable creation -> dorlam
 # print            -> dekhao
+# input            -> naw
+# if               -> jodi
+# else             -> nahole
 # while loop       -> guraw
 # end block        -> shesh
+# break            -> bhenge_jao
+# continue         -> cholte_thako
 # math words       -> jog, biyog, gun, vag
+# logic words      -> ar, ba, na
+# bool literals    -> shotti, mitha
 
 KEY_DORLAM = "dorlam"
 KEY_DEKHAO = "dekhao"
+KEY_NAW = "naw"
+KEY_JODI = "jodi"
+KEY_NAHOLE = "nahole"
 KEY_GURAW = "guraw"
 KEY_SHESH = "shesh"
+KEY_BREAK = "bhenge_jao"
+KEY_CONTINUE = "cholte_thako"
 
 BANG_OP_TO_SYMBOL = {
     "jog": "+",
     "biyog": "-",
     "gun": "*",
     "vag": "/",
+    "ar": "and",
+    "ba": "or",
+    "na": "not",
+}
+
+BOOL_LITERALS = {
+    "shotti": True,
+    "mitha": False,
 }
 
 
@@ -32,6 +52,14 @@ class ParseError(Exception):
 
 
 class RuntimeErrorBnl(Exception):
+    pass
+
+
+class BreakSignal(Exception):
+    pass
+
+
+class ContinueSignal(Exception):
     pass
 
 
@@ -112,11 +140,35 @@ class ExprParser:
         if not self.tokens:
             raise ParseError("Expression cannot be empty")
 
-        node = self._parse_comparison()
+        node = self._parse_or()
         if self._current() is not None:
             raise ParseError(f"Unexpected token: {self._current().value}")
 
         return node
+
+    def _parse_or(self) -> ExprNode:
+        node = self._parse_and()
+        while self._current() is not None and self._current().value == "or":
+            operator = self._eat().value
+            right = self._parse_and()
+            node = ExprNode(kind="binary", value=operator, left=node, right=right)
+        return node
+
+    def _parse_and(self) -> ExprNode:
+        node = self._parse_not()
+        while self._current() is not None and self._current().value == "and":
+            operator = self._eat().value
+            right = self._parse_not()
+            node = ExprNode(kind="binary", value=operator, left=node, right=right)
+        return node
+
+    def _parse_not(self) -> ExprNode:
+        token = self._current()
+        if token is not None and token.value == "not":
+            self._eat("not")
+            right = self._parse_not()
+            return ExprNode(kind="unary", value="not", right=right)
+        return self._parse_comparison()
 
     def _parse_comparison(self) -> ExprNode:
         node = self._parse_term()
@@ -176,6 +228,8 @@ class ExprParser:
 
         if token.kind == "IDENT":
             self._eat(expected_kind="IDENT")
+            if token.value in BOOL_LITERALS:
+                return ExprNode(kind="bool", value=BOOL_LITERALS[token.value])
             return ExprNode(kind="var", value=token.value)
 
         raise ParseError(f"Unexpected token: {token.value}")
@@ -197,10 +251,20 @@ class ProgramParser:
         self.lines = [line.rstrip() for line in source.splitlines()]
         self.pos = 0
 
-    def parse(self) -> list[Statement]:
-        return self._parse_block(stop_on_shesh=False)
+    @staticmethod
+    def _split_print_args(expr_text: str) -> list[str]:
+        return re.findall(r'"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'|[^\s]+', expr_text)
 
-    def _parse_block(self, stop_on_shesh: bool) -> list[Statement]:
+    def parse(self) -> list[Statement]:
+        statements, stop_keyword = self._parse_block(stop_keywords=set())
+        if stop_keyword is not None:
+            raise ParseError(f"Unexpected '{stop_keyword}' at top level")
+        return statements
+
+    def _error(self, message: str) -> ParseError:
+        return ParseError(f"Line {self.pos}: {message}")
+
+    def _parse_block(self, stop_keywords: set[str]) -> tuple[list[Statement], Optional[str]]:
         statements: list[Statement] = []
 
         while self.pos < len(self.lines):
@@ -216,14 +280,18 @@ class ProgramParser:
 
             keyword = pieces[0]
 
+            if keyword in stop_keywords:
+                return statements, keyword
+
             if keyword == KEY_SHESH:
-                if stop_on_shesh:
-                    return statements
-                raise ParseError("Unexpected 'shesh' at top level")
+                raise self._error("Unexpected 'shesh' at top level")
+
+            if keyword == KEY_NAHOLE:
+                raise self._error("Unexpected 'nahole' without matching 'jodi'")
 
             if keyword == KEY_DORLAM:
                 if len(pieces) < 3:
-                    raise ParseError("'dorlam' needs: dorlam <name> <expression>")
+                    raise self._error("'dorlam' needs: dorlam <name> <expression>")
                 var_name = pieces[1]
                 expr_text = raw_line.split(None, 2)[2]
                 expr = ExprParser(expr_text).parse()
@@ -232,30 +300,77 @@ class ProgramParser:
 
             if keyword == KEY_DEKHAO:
                 if len(pieces) < 2:
-                    raise ParseError("'dekhao' needs an expression")
+                    raise self._error("'dekhao' needs an expression")
                 expr_text = raw_line.split(None, 1)[1]
-                expr = ExprParser(expr_text).parse()
-                statements.append(Statement(kind="print", value=expr))
+                try:
+                    expr = ExprParser(expr_text).parse()
+                    statements.append(Statement(kind="print", value=expr))
+                except ParseError:
+                    arg_exprs: list[ExprNode] = []
+                    for arg_text in self._split_print_args(expr_text):
+                        arg_exprs.append(ExprParser(arg_text).parse())
+                    statements.append(Statement(kind="print_many", value=arg_exprs))
+                continue
+
+            if keyword == KEY_NAW:
+                if len(pieces) < 2:
+                    raise self._error("'naw' needs: naw <name> [prompt]")
+                var_name = pieces[1]
+                prompt_expr = None
+                if len(pieces) > 2:
+                    prompt_text = raw_line.split(None, 2)[2]
+                    prompt_expr = ExprParser(prompt_text).parse()
+                statements.append(Statement(kind="input", value=(var_name, prompt_expr)))
+                continue
+
+            if keyword == KEY_JODI:
+                if len(pieces) < 2:
+                    raise self._error("'jodi' needs a condition")
+                condition_text = raw_line.split(None, 1)[1]
+                condition_expr = ExprParser(condition_text).parse()
+
+                then_body, stop_keyword = self._parse_block({KEY_NAHOLE, KEY_SHESH})
+                else_body: list[Statement] = []
+
+                if stop_keyword == KEY_NAHOLE:
+                    else_body, end_keyword = self._parse_block({KEY_SHESH})
+                    if end_keyword != KEY_SHESH:
+                        raise self._error("Expected 'shesh' after 'nahole' block")
+                elif stop_keyword != KEY_SHESH:
+                    raise self._error("Expected 'shesh' after 'jodi' block")
+
+                statements.append(Statement(kind="if", value=(condition_expr, then_body, else_body)))
                 continue
 
             if keyword == KEY_GURAW:
                 if len(pieces) < 2:
-                    raise ParseError("'guraw' needs a condition")
+                    raise self._error("'guraw' needs a condition")
                 expr_text = raw_line.split(None, 1)[1]
                 condition = ExprParser(expr_text).parse()
-                body = self._parse_block(stop_on_shesh=True)
+                body, end_keyword = self._parse_block({KEY_SHESH})
+                if end_keyword != KEY_SHESH:
+                    raise self._error("Expected 'shesh' after 'guraw' block")
                 statements.append(Statement(kind="while", value=(condition, body)))
                 continue
 
-            raise ParseError(
+            if keyword == KEY_BREAK:
+                statements.append(Statement(kind="break"))
+                continue
+
+            if keyword == KEY_CONTINUE:
+                statements.append(Statement(kind="continue"))
+                continue
+
+            raise self._error(
                 "Unknown keyword: "
-                f"{keyword}. Use 'dorlam', 'dekhao', 'guraw', and 'shesh'."
+                f"{keyword}. Use 'dorlam', 'dekhao', 'naw', 'jodi', 'nahole', 'guraw', 'shesh', 'bhenge_jao', and 'cholte_thako'."
             )
 
-        if stop_on_shesh:
-            raise ParseError("Expected 'shesh' before file ended")
+        if stop_keywords:
+            expected = " / ".join(sorted(stop_keywords))
+            raise self._error(f"Expected '{expected}' before file ended")
 
-        return statements
+        return statements, None
 
 
 # -----------------------------
@@ -280,11 +395,23 @@ class Interpreter:
     def __init__(self):
         self.env = Environment()
 
+    @staticmethod
+    def _coerce_input_value(raw_value: str) -> Any:
+        raw_value = raw_value.strip()
+        if re.fullmatch(r"-?\d+", raw_value):
+            return int(raw_value)
+        if re.fullmatch(r"-?\d+\.\d+", raw_value):
+            return float(raw_value)
+        return raw_value
+
     def eval_expr(self, node: ExprNode) -> Any:
         if node.kind == "number":
             return node.value
 
         if node.kind == "string":
+            return node.value
+
+        if node.kind == "bool":
             return node.value
 
         if node.kind == "var":
@@ -294,6 +421,8 @@ class Interpreter:
             value = self.eval_expr(node.right)
             if node.value == "-":
                 return -value
+            if node.value == "not":
+                return not bool(value)
             raise RuntimeErrorBnl(f"Unknown unary operator: {node.value}")
 
         if node.kind == "binary":
@@ -321,6 +450,10 @@ class Interpreter:
                 return left <= right
             if operator == ">=":
                 return left >= right
+            if operator == "and":
+                return bool(left) and bool(right)
+            if operator == "or":
+                return bool(left) or bool(right)
 
             raise RuntimeErrorBnl(f"Unknown operator: {operator}")
 
@@ -337,10 +470,44 @@ class Interpreter:
                 print(self.eval_expr(statement.value))
                 continue
 
+            if statement.kind == "print_many":
+                values = [self.eval_expr(expr) for expr in statement.value]
+                print(*values)
+                continue
+
+            if statement.kind == "input":
+                var_name, prompt_expr = statement.value
+                prompt = ""
+                if prompt_expr is not None:
+                    prompt = str(self.eval_expr(prompt_expr))
+                user_text = input(prompt)
+                self.env.set_var(var_name, self._coerce_input_value(user_text))
+                continue
+
+            if statement.kind == "if":
+                condition, then_body, else_body = statement.value
+                if self.eval_expr(condition):
+                    self.execute(then_body)
+                else:
+                    self.execute(else_body)
+                continue
+
             if statement.kind == "while":
                 condition, body = statement.value
                 while self.eval_expr(condition):
-                    self.execute(body)
+                    try:
+                        self.execute(body)
+                    except ContinueSignal:
+                        continue
+                    except BreakSignal:
+                        break
+                continue
+
+            if statement.kind == "break":
+                raise BreakSignal()
+
+            if statement.kind == "continue":
+                raise ContinueSignal()
                 continue
 
             raise RuntimeErrorBnl(f"Unknown statement type: {statement.kind}")

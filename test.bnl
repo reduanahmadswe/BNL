@@ -3,13 +3,28 @@
 dorlam a 8
 dorlam b 2
 
-dekhao a jog b
-dekhao a biyog b
-dekhao a gun b
-dekhao a vag b
+dorlam sum a jog b
+dorlam sub a biyog b
+dorlam mul a gun b
+dorlam div a vag b
+
+dekhao "sum:" sum
+dekhao "sub:" sub
+dekhao "mul:" mul
+dekhao "div:" div
 
 dorlam i 1
 guraw i <= 3
+jodi i == 2
+dorlam i i jog 1
+cholte_thako
+shesh
+
 dekhao i
+
+jodi i == 3
+bhenge_jao
+shesh
+
 dorlam i i jog 1
 shesh
